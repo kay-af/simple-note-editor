@@ -75,8 +75,13 @@ class Note {
       "/note-${DateTime.now().millisecondsSinceEpoch}.json";
 }
 
-Future<String> get _noteDirPath async =>
-    (await getApplicationDocumentsDirectory()).path + "/notes";
+Future<String> get _noteDirPath async {
+  var dir = await getApplicationDocumentsDirectory();
+  var notesDir = Directory(dir.path + "/notes");
+  if(!(await notesDir.exists()))
+    await notesDir.create(recursive: true);
+  return notesDir.path;
+}
 
 class NotesListManager {
   PublishSubject<List<Note>> _notesStream = PublishSubject<List<Note>>();
@@ -150,6 +155,6 @@ class NoteSorter {
   static int byDateCreatedAscending(Note n1, Note n2) => n1.created.millisecondsSinceEpoch - n2.created.millisecondsSinceEpoch;
   static int byDateCreatedDescending(Note n1, Note n2) => n2.created.millisecondsSinceEpoch - n1.created.millisecondsSinceEpoch;
 
-  static int byDateModifiedAscending(Note n1, Note n2) => n1.created.millisecondsSinceEpoch - n2.created.millisecondsSinceEpoch;
-  static int byDateModifiedDescending(Note n1, Note n2) => n2.created.millisecondsSinceEpoch - n1.created.millisecondsSinceEpoch;
+  static int byDateModifiedAscending(Note n1, Note n2) => n1.lastModified.millisecondsSinceEpoch - n2.lastModified.millisecondsSinceEpoch;
+  static int byDateModifiedDescending(Note n1, Note n2) => n2.lastModified.millisecondsSinceEpoch - n1.lastModified.millisecondsSinceEpoch;
 }

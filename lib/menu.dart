@@ -6,6 +6,7 @@ import 'package:note_editor/noteModel.dart';
 import 'package:note_editor/ui_helper.dart';
 import 'package:note_editor/writer.dart';
 import 'package:share/share.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 typedef bool SearchFilter(Note note);
 
@@ -20,6 +21,7 @@ class _MenuPageState extends State<MenuPage>
     with SingleTickerProviderStateMixin {
   final NotesListManager _notesListManager = NotesListManager();
 
+  bool _overlay = false;
   bool _fav = false;
   TabController _tabController;
   NoteSortingType _noteSortingType = NoteSortingType.CreatedDescending;
@@ -49,6 +51,18 @@ class _MenuPageState extends State<MenuPage>
                 });
       _notesListManager.refreshList(filter: _searchFilter);
     });
+
+    SharedPreferences.getInstance().then((spf) {
+      const String key = "first_menu_lunch";
+      
+      if(!spf.containsKey(key)) {
+        spf.setBool(key, true).then((val) => setState(() => _overlay = true));
+      } else {
+        setState(() {
+          _overlay = spf.getBool(key);
+        });
+      }
+    });
   }
 
   @override
@@ -67,103 +81,151 @@ class _MenuPageState extends State<MenuPage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-            icon: Icon(Entypo.info_with_circle),
-            onPressed: () async {
-              await showDialog(
-                  context: context, builder: (context) => AboutAppDialog());
-            }),
-        title: Text("Notes"),
-        bottom: !_searchExpanded
-            ? null
-            : PreferredSize(
-                child: Container(
-                  margin: const EdgeInsets.all(8.0),
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                  decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      borderRadius:
-                          const BorderRadius.all(Radius.circular(8.0))),
-                  child: TextField(
-                    autofocus: true,
-                    controller: _searchTextEditingController,
-                    decoration: InputDecoration(
-                        hintText: "Search",
-                        prefixIcon: Icon(Entypo.magnifying_glass,
-                            color: Colors.grey[400]),
-                        border: OutlineInputBorder(borderSide: BorderSide.none),
-                        contentPadding: const EdgeInsets.all(0.0)),
-                  ),
-                ),
-                preferredSize: Size.fromHeight(64)),
-        actions: <Widget>[
-          IconButton(
-              icon: Icon(
-                Entypo.magnifying_glass,
-                color: _searchExpanded ? Colors.blue : Colors.black,
-              ),
-              onPressed: () {
-                _searchTextEditingController.text = "";
-                setState(() {
-                  _searchFilter = null;
-                  _searchExpanded = !_searchExpanded;
-                });
-              }),
-          IconButton(
-              icon: Icon(Entypo.area_graph),
+    return Stack(children: [
+      Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+              icon: Icon(Entypo.info_with_circle),
               onPressed: () async {
-                var result = await showDefaultBottomSheet(
-                    context: context,
-                    body: NoteSorterWidget(
-                      categorize: _separate,
-                      currentSortingType: _noteSortingType,
-                    ));
-                if (result != null) {
-                  setState(() {
-                    _noteSortingType = result["type"];
-                    _separate = result["categorize"];
-                  });
-                  _notesListManager.refreshList(filter: _searchFilter);
-                }
+                await showDialog(
+                    context: context, builder: (context) => AboutAppDialog());
               }),
-          IconButton(
-            icon: Icon(FontAwesome.plus),
-            onPressed: () async {
-              var emptyNote = await Note.generateEmpty(liked: _fav);
-              await Navigator.of(context)
-                  .pushNamed(WriterPage.ROUTE, arguments: emptyNote);
+          title: Text("Notes"),
+          bottom: !_searchExpanded
+              ? null
+              : PreferredSize(
+                  child: Container(
+                    margin: const EdgeInsets.all(8.0),
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius:
+                            const BorderRadius.all(Radius.circular(8.0))),
+                    child: TextField(
+                      autofocus: true,
+                      controller: _searchTextEditingController,
+                      decoration: InputDecoration(
+                          hintText: "Search",
+                          prefixIcon: Icon(Entypo.magnifying_glass,
+                              color: Colors.grey[400]),
+                          border:
+                              OutlineInputBorder(borderSide: BorderSide.none),
+                          contentPadding: const EdgeInsets.all(0.0)),
+                    ),
+                  ),
+                  preferredSize: Size.fromHeight(64)),
+          actions: <Widget>[
+            IconButton(
+                icon: Icon(
+                  Entypo.magnifying_glass,
+                  color: _searchExpanded ? Colors.blue : Colors.black,
+                ),
+                onPressed: () {
+                  _searchTextEditingController.text = "";
+                  setState(() {
+                    _searchFilter = null;
+                    _searchExpanded = !_searchExpanded;
+                  });
+                }),
+            IconButton(
+                icon: Icon(Entypo.area_graph),
+                onPressed: () async {
+                  var result = await showDefaultBottomSheet(
+                      context: context,
+                      body: NoteSorterWidget(
+                        categorize: _separate,
+                        currentSortingType: _noteSortingType,
+                      ));
+                  if (result != null) {
+                    setState(() {
+                      _noteSortingType = result["type"];
+                      _separate = result["categorize"];
+                    });
+                    _notesListManager.refreshList(filter: _searchFilter);
+                  }
+                }),
+            IconButton(
+              icon: Icon(FontAwesome.plus),
+              onPressed: () async {
+                var emptyNote = await Note.generateEmpty(liked: _fav);
+                await Navigator.of(context)
+                    .pushNamed(WriterPage.ROUTE, arguments: emptyNote);
 
-              resetSearchFilter();
+                resetSearchFilter();
 
-              Future.delayed(Duration(milliseconds: 200)).then((val) =>
-                  _notesListManager.refreshList(filter: _searchFilter));
-            },
-          ),
-        ],
+                Future.delayed(Duration(milliseconds: 200)).then((val) =>
+                    _notesListManager.refreshList(filter: _searchFilter));
+              },
+            ),
+          ],
+        ),
+        body: MenuWidget(
+          notesListManager: _notesListManager,
+          fav: _fav,
+          sortingType: _noteSortingType,
+          categorize: _separate,
+          searchFilter: _searchFilter,
+        ),
+        bottomNavigationBar: Container(
+          color: Colors.white,
+          child: TabBar(controller: _tabController, tabs: [
+            Tab(
+              icon: Icon(FontAwesome.sticky_note),
+              text: "All",
+            ),
+            Tab(
+              icon: Icon(FontAwesome.heart),
+              text: "Favourites",
+            ),
+          ]),
+        ),
       ),
-      body: MenuWidget(
-        notesListManager: _notesListManager,
-        fav: _fav,
-        sortingType: _noteSortingType,
-        categorize: _separate,
-        searchFilter: _searchFilter,
-      ),
-      bottomNavigationBar: Container(
-        color: Colors.white,
-        child: TabBar(controller: _tabController, tabs: [
-          Tab(
-            icon: Icon(FontAwesome.sticky_note),
-            text: "All",
+
+      // Overlay for first time help
+      !_overlay?SizedBox.shrink():GestureDetector(
+        onTap: () {
+          setState(() {
+            _overlay = false;
+          });
+          const String key = "first_menu_lunch";
+          SharedPreferences.getInstance().then((spf) => spf.setBool(key, false));
+        },
+              child: Scaffold(
+          backgroundColor: Colors.transparent,
+          body: Stack(
+            children: <Widget>[
+              Container(
+                color: Colors.black.withAlpha(180),
+              ),
+              Positioned(
+                right: 25,
+                top: 200,
+                child: overlayText(icon: Entypo.plus, text: "Add a note", context: context)),
+              Positioned(
+                right: 25,
+                top: 160,
+                child: overlayText(icon: Entypo.area_graph, text: "Sort notes", context: context)),
+              Positioned(
+                right: 25,
+                top: 120,
+                child: overlayText(icon: Entypo.magnifying_glass, text: "Search", context: context)),
+              Positioned(
+                left: 25,
+                top: 120,
+                child: overlayText(icon: Entypo.info_with_circle, text: "About app", context: context)),
+              Positioned(
+                right: 25,
+                bottom: 100,
+                child: overlayText(icon: Entypo.heart, text: "Favourites", context: context)),
+              Positioned(
+                left: 25,
+                bottom: 100,
+                child: overlayText(icon: FontAwesome.sticky_note, text: "All notes", context: context)),
+            ],
           ),
-          Tab(
-            icon: Icon(FontAwesome.heart),
-            text: "Favourites",
-          ),
-        ]),
+        ),
       ),
-    );
+    ]);
   }
 }
 
@@ -224,14 +286,38 @@ class _MenuWidgetState extends State<MenuWidget> {
             // If there are zero notes
             if (data.length == 0) {
               return Center(
-                child: Text(
-                  widget.searchFilter != null
-                      ? "No search results!"
-                      : fav
-                          ? "No favourite notes!\nTap the heart to mark a note as favourite"
-                          : "You have no notes!",
-                  textAlign: TextAlign.center,
-                ),
+                child: widget.searchFilter != null
+                    ? Text(
+                        "No search results!",
+                        textAlign: TextAlign.center,
+                      )
+                    : fav
+                        ? RichText(
+                            textAlign: TextAlign.center,
+                            text: TextSpan(
+                                style: Theme.of(context).textTheme.subhead,
+                                children: [
+                                  TextSpan(
+                                      text: "No favourite notes!\nTap the "),
+                                  WidgetSpan(
+                                      child: Icon(Entypo.heart,
+                                          color: Colors.redAccent)),
+                                  TextSpan(text: " to make a note favourite")
+                                ]),
+                          )
+                        : RichText(
+                            textAlign: TextAlign.center,
+                            text: TextSpan(
+                                style: Theme.of(context).textTheme.subhead,
+                                children: [
+                                  TextSpan(
+                                      text:
+                                          "You don't have any notes\nTap the "),
+                                  WidgetSpan(
+                                      child: Icon(Entypo.plus,
+                                          color: Colors.black)),
+                                  TextSpan(text: " to create a note")
+                                ])),
               );
             }
 
@@ -460,7 +546,7 @@ class _MenuWidgetState extends State<MenuWidget> {
       DateTime lastValue;
       list.forEach((item) {
         if (lastValue == null) {
-          lastValue = item.created;
+          lastValue = item.lastModified;
           pumped.add(dateFormat.format(item.lastModified));
         } else {
           var current = item.lastModified;

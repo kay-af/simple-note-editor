@@ -6,15 +6,18 @@ import 'package:flutter_icons/flutter_icons.dart';
 import 'package:note_editor/noteModel.dart';
 import 'package:note_editor/ui_helper.dart';
 import 'package:share/share.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class WriterPage extends StatefulWidget {
   static const String ROUTE = "/writer";
+  static const firstOverlayKey = "first_writer_launch";
 
   @override
   _WriterPageState createState() => _WriterPageState();
 }
 
 class _WriterPageState extends State<WriterPage> {
+  bool _overlay = false;
   Note _writerNote;
   TextEditingController _noteEditingController = TextEditingController();
   bool _saved;
@@ -28,6 +31,18 @@ class _WriterPageState extends State<WriterPage> {
           _saved = false;
         });
         _writerNote.content = _noteEditingController.text;
+      }
+    });
+
+    SharedPreferences.getInstance().then((spf) {
+      if (!spf.containsKey(WriterPage.firstOverlayKey)) {
+        spf
+            .setBool(WriterPage.firstOverlayKey, true)
+            .then((val) => setState(() => _overlay = true));
+      } else {
+        setState(() {
+          _overlay = spf.getBool(WriterPage.firstOverlayKey);
+        });
       }
     });
   }
@@ -65,66 +80,127 @@ class _WriterPageState extends State<WriterPage> {
         }
         return true;
       },
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(_writerNote.title),
-          actions: <Widget>[
-            IconButton(
-                icon: Icon(Entypo.pencil),
-                onPressed: () async {
-                  var noteName = await showDialog<String>(
-                      context: context,
-                      builder: (context) {
-                        return InputDialog(
-                          title: "Enter note title",
-                          initialText: _writerNote.title,
-                          inputLabel: "Title",
-                          validator: (input) =>
-                              noteNameValidationRegex.hasMatch(input),
-                        );
-                      });
-                  if (noteName != null) {
-                    setState(() {
-                      _writerNote.title = noteName;
-                      _saved = false;
-                    });
-                  }
-                }),
-            IconButton(
-                icon: Icon(Entypo.save),
-                onPressed: _saved
-                    ? null
-                    : () async {
-                        await _writerNote.save().then((val) => setState(() {
-                              _saved = true;
-                            }));
+      child: Stack(
+        children: <Widget>[
+          Scaffold(
+            appBar: AppBar(
+              title: Text(_writerNote.title),
+              actions: <Widget>[
+                IconButton(
+                    icon: Icon(Entypo.pencil),
+                    onPressed: () async {
+                      var noteName = await showDialog<String>(
+                          context: context,
+                          builder: (context) {
+                            return InputDialog(
+                              title: "Enter note title",
+                              initialText: _writerNote.title,
+                              inputLabel: "Title",
+                              validator: (input) =>
+                                  noteNameValidationRegex.hasMatch(input),
+                            );
+                          });
+                      if (noteName != null) {
+                        setState(() {
+                          _writerNote.title = noteName;
+                          _saved = false;
+                        });
+                      }
+                    }),
+                IconButton(
+                    icon: Icon(Entypo.save),
+                    onPressed: _saved
+                        ? null
+                        : () async {
+                            await _writerNote.save().then((val) => setState(() {
+                                  _saved = true;
+                                }));
 
-                        showFlash(
-                            context: context,
-                            builder: (context, controller) {
-                              return Flash.bar(
-                                controller: controller,
-                                backgroundColor: Colors.black87,
-                                style: FlashStyle.floating,
-                                margin: const EdgeInsets.only(bottom: 60.0),
-                                child: FlashBar(
-                                  message: Text(
-                                    "File Saved!",
-                                    style: TextStyle(color: Colors.white),
-                                  ),
-                                  icon: Icon(
-                                    Entypo.save,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              );
-                            },
-                            duration: const Duration(seconds: 2));
-                      })
-          ],
-        ),
-        backgroundColor: Colors.grey[100],
-        body: WriterWidget(_writerNote, _noteEditingController),
+                            showFlash(
+                                context: context,
+                                builder: (context, controller) {
+                                  return Flash.bar(
+                                    controller: controller,
+                                    backgroundColor: Colors.black87,
+                                    style: FlashStyle.floating,
+                                    margin: const EdgeInsets.only(bottom: 60.0),
+                                    child: FlashBar(
+                                      message: Text(
+                                        "File Saved!",
+                                        style: TextStyle(color: Colors.white),
+                                      ),
+                                      icon: Icon(
+                                        Entypo.save,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                duration: const Duration(seconds: 2));
+                          }),
+              ],
+            ),
+            backgroundColor: Colors.grey[100],
+            body: WriterWidget(_writerNote, _noteEditingController),
+          ),
+
+          !_overlay
+              ? SizedBox.shrink()
+              : GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _overlay = false;
+                    });
+                    SharedPreferences.getInstance()
+                        .then((spf) => spf.setBool(WriterPage.firstOverlayKey, false));
+                  },
+                  child: Scaffold(
+                    backgroundColor: Colors.transparent,
+                    body: Stack(
+                      children: <Widget>[
+                        Container(
+                          color: Colors.black.withAlpha(180),
+                        ),
+                        Positioned(
+                            right: 25,
+                            top: 160,
+                            child: overlayText(
+                                icon: Entypo.save,
+                                text: "Save note",
+                                context: context)),
+                        Positioned(
+                            right: 25,
+                            top: 120,
+                            child: overlayText(
+                                icon: Entypo.pencil,
+                                text: "Edit note title",
+                                context: context)),
+                        Positioned(
+                            right: 25,
+                            bottom: 100,
+                            child: overlayText(
+                                icon: Entypo.heart,
+                                text: "(Un)Favourite",
+                                context: context)),
+                        Positioned(
+                            left: 25,
+                            bottom: 100,
+                            child: overlayText(
+                                icon: Entypo.trash,
+                                text: "Delete",
+                                context: context)),
+                        Positioned(
+                            left: 120,
+                            bottom: 160,
+                            child: overlayText(
+                                icon: Entypo.share,
+                                text: "Share",
+                                context: context)),
+                      ],
+                    ),
+                  ),
+                ),
+        ],
       ),
     );
   }

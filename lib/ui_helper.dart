@@ -2,7 +2,9 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_icons/flutter_icons.dart';
 import 'package:note_editor/noteModel.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class InputDialog extends StatefulWidget {
   final String title;
@@ -276,10 +278,8 @@ class _NoteSorterWidgetState extends State<NoteSorterWidget> {
   Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: () async {
-        Navigator.of(context).pop({
-          "categorize": _categorize,
-          "type": widget.currentSortingType
-        });
+        Navigator.of(context).pop(
+            {"categorize": _categorize, "type": widget.currentSortingType});
         return false;
       },
       child: Column(
@@ -369,13 +369,64 @@ class AboutAppDialog extends StatelessWidget {
           children: <Widget>[
             Text(
               "About",
-              style: Theme.of(context).textTheme.title.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(context)
+                  .textTheme
+                  .title
+                  .copyWith(fontWeight: FontWeight.bold),
               overflow: TextOverflow.ellipsis,
+            ),
+            Divider(),
+            SizedBox(
+              height: 16,
+            ),
+            Text(
+              _about,
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(
+              height: 12,
+            ),
+            IconButton(
+              iconSize: 38,
+              icon: Icon(Ionicons.logo_github),
+              onPressed: () async => await launch(_githubLink),
+            ),
+            Divider(),
+            SizedBox(
+              height: 16,
+            ),
+            Text(
+              "Find me",
+              style: Theme.of(context)
+                  .textTheme
+                  .subhead
+                  .copyWith(fontWeight: FontWeight.bold),
             ),
             SizedBox(
               height: 16,
             ),
-            Text(_about, textAlign: TextAlign.center,)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: <Widget>[
+                IconButton(
+                    iconSize: 38,
+                    icon: Icon(Ionicons.logo_facebook),
+                    color: Colors.blue,
+                    onPressed: () async => await launch(_facebookLink)),
+                IconButton(
+                    iconSize: 38,
+                    color: Colors.pink,
+                    icon: Icon(Ionicons.logo_instagram),
+                    onPressed: () async => await launch(_instagramLink)),
+                IconButton(
+                    iconSize: 38,
+                    color: Colors.purple,
+                    icon: Icon(Ionicons.logo_linkedin),
+                    onPressed: () async => await launch(_linkedInLink)),
+              ],
+            ),
+            Divider(),
+            CloseButton(),
           ],
         ),
       ),
@@ -383,4 +434,32 @@ class AboutAppDialog extends StatelessWidget {
   }
 }
 
-const String _about = "This application is open-source. Code can be found on github";
+Widget overlayText(
+    {@required String text, @required BuildContext context, IconData icon}) {
+  if (icon == null) {
+    return Text(
+      "$text",
+      style: Theme.of(context).textTheme.subhead.copyWith(color: Colors.white),
+    );
+  }
+  else {
+    return RichText(
+      text: TextSpan(
+        style: Theme.of(context).textTheme.subhead.copyWith(color: Colors.white),
+        children: [
+          WidgetSpan(child: Icon(icon, color: Colors.white,)),
+          WidgetSpan(child: SizedBox(width: 16,)),
+          TextSpan(text: "$text"),
+        ]
+      ),
+    );
+  }
+}
+
+const String _about =
+    "This application is open-source. Code can be found on github";
+const String _githubLink = "https://github.com/kay-af/simple-note-editor";
+const String _facebookLink = "https://www.facebook.com/afridi.kayal.3";
+const String _instagramLink = "https://www.instagram.com/_frid.c";
+const String _linkedInLink =
+    "https://www.linkedin.com/in/afridi-kayal-ba110719b";

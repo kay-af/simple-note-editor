@@ -77,6 +77,8 @@ class _WriterPageState extends State<WriterPage> {
             debugPrint("Saving file");
             await _writerNote.save();
           }
+
+          if(result==null) return false;
         }
         return true;
       },
@@ -143,7 +145,6 @@ class _WriterPageState extends State<WriterPage> {
             backgroundColor: Colors.grey[100],
             body: WriterWidget(_writerNote, _noteEditingController),
           ),
-
           !_overlay
               ? SizedBox.shrink()
               : GestureDetector(
@@ -151,8 +152,8 @@ class _WriterPageState extends State<WriterPage> {
                     setState(() {
                       _overlay = false;
                     });
-                    SharedPreferences.getInstance()
-                        .then((spf) => spf.setBool(WriterPage.firstOverlayKey, false));
+                    SharedPreferences.getInstance().then((spf) =>
+                        spf.setBool(WriterPage.firstOverlayKey, false));
                   },
                   child: Scaffold(
                     backgroundColor: Colors.transparent,
@@ -216,7 +217,28 @@ class WriterWidget extends StatefulWidget {
   _WriterWidgetState createState() => _WriterWidgetState();
 }
 
-class _WriterWidgetState extends State<WriterWidget> {
+class _WriterWidgetState extends State<WriterWidget>
+    with WidgetsBindingObserver {
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      FocusScope.of(context).requestFocus(FocusNode());
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(

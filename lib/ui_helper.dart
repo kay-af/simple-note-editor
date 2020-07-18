@@ -222,7 +222,7 @@ Widget labelledText(
           style: Theme.of(context)
               .textTheme
               .subtitle
-              .copyWith(fontWeight: FontWeight.bold)),
+              .copyWith(fontWeight: FontWeight.w600)),
     ], text: "$label: ", style: Theme.of(context).textTheme.subtitle),
     overflow: TextOverflow.ellipsis,
   );

@@ -27,7 +27,6 @@ dependencies:
   flutter_icons: ^1.1.0
   intl: ^0.16.1
   flutter_spinkit: ^4.1.2
-  shimmer: ^1.1.1
   share: ^0.6.4+3
   flash: ^1.2.0
   rxdart: ^0.24.1
@@ -42,7 +41,7 @@ dev_dependencies:
 
 flutter_icons:
   image_path: "assets/launcher_icon.png"
-  android: "launcher_icon"
+  android: true
   ios: true
 
 # For information on the generic Dart part of this file, see the
